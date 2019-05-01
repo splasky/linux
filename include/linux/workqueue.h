@@ -14,6 +14,8 @@
 #include <linux/atomic.h>
 #include <linux/cpumask.h>
 #include <linux/rcupdate.h>
+#include <linux/flexsc.h>
+
 
 struct workqueue_struct;
 
@@ -106,6 +108,7 @@ struct work_struct {
 #ifdef CONFIG_LOCKDEP
 	struct lockdep_map lockdep_map;
 #endif
+	struct flexsc_sysentry *work_entry;
 };
 
 #define WORK_DATA_INIT()	ATOMIC_LONG_INIT((unsigned long)WORK_STRUCT_NO_POOL)
@@ -245,6 +248,12 @@ static inline unsigned int work_static(struct work_struct *work) { return 0; }
 		(_work)->func = (_func);				\
 	} while (0)
 #endif
+
+#define FLEXSC_INIT_WORK(_work, _func, _entry)          \
+    do {                                                \
+        __INIT_WORK(_work, _func, 0);                       \
+        (_work)->work_entry = (_entry);              \
+    } while(0)
 
 #define INIT_WORK(_work, _func)						\
 	__INIT_WORK((_work), (_func), 0)
