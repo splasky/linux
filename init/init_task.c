@@ -179,6 +179,7 @@ struct task_struct init_task
 #ifdef CONFIG_SECURITY
 	.security	= NULL,
 #endif
+    .flexsc_enabled = 0,
 };
 EXPORT_SYMBOL(init_task);
 
@@ -187,5 +188,6 @@ EXPORT_SYMBOL(init_task);
  * linker map entry.
  */
 #ifndef CONFIG_THREAD_INFO_IN_TASK
-struct thread_info init_thread_info __init_thread_info = INIT_THREAD_INFO(init_task);
+struct thread_info init_thread_info __init_thread_info =
+	INIT_THREAD_INFO(init_task);
 #endif

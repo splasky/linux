@@ -166,7 +166,25 @@ GLOBAL(entry_SYSCALL_64_after_hwframe)
 	pushq	%rax					/* pt_regs->orig_ax */
 
 	PUSH_AND_CLEAR_REGS rax=$-ENOSYS
-
+    
+	pushq %rax
+    pushq %r9
+    pushq %r8
+    pushq %rcx
+    pushq %rdx
+    pushq %rsi
+    pushq %rdi
+    movq %rax, %rdi /* Follow flexsc_syscall_hook 's argument order */
+    movq %rsp, %rsi 
+    call flexsc_syscall_hook
+    popq %rdi
+    popq %rsi
+    popq %rdx
+    popq %rcx
+    popq %r8
+    popq %r9
+    popq %rax
+	
 	TRACE_IRQS_OFF
 
 	/* IRQs are off. */
