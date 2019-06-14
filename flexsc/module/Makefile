@@ -1,33 +1,44 @@
-name=syshook
-obj-m := $(addsuffix .o,$(name))
-# syshook-objs := print.o
+MOD   := syshook
+obj-m := $(addsuffix .o,$(MOD))
+PWD   := $(shell pwd)
 
-KERNEL_DIR = /lib/modules/$(shell uname -r)/build
-PWD = $(shell pwd)
-ALREADY_INSTERTTED=$(shell lsmod | grep $(name) | awk '{print $$1;}')
+ALREADY_INSTERTTED=$(shell lsmod | grep $(MOD) | awk '{print $$1;}')
+# TODO:This maybe can be remove
+# ccflags-y=-I$(PWD)
 
-ccflags-y=-I$(PWD)
+ifneq ($(KERNELPATH),)
+	KDIR	:= $(KERNELPATH)
+else
+	# Default kernel path
+	KDIR	:= /home/splasky/flexsc/linux/
+endif
 
+ARCH	:= $(shell uname -p)
+
+ifeq ($(ARCH),x86_64)
+	KDEF	:= X86_64
+else
+	KDEF	:= AARCH64
+endif
+
+EXTRA_CFLAGS	:= -D $(KDEF)
 
 default :
-	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) modules
+	
+	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 
 run :
 ifneq ($(ALREADY_INSTERTTED),)
-	sudo rmmod $(name)
+	sudo rmmod $(MOD)
 endif
-	sudo insmod $(name).ko
+	sudo insmod $(MOD).ko
 	# dmesg
 	../user/user-program
 
-user:
-
-
 rm :
-	sudo rmmod $(name)
-	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) clean
+	sudo rmmod $(MOD)
+	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) clean
 	rm $(obj) $(exe)
 
 clean:
-	$(MAKE) -C $(KERNEL_DIR) SUBDIRS=$(PWD) clean
-
+	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) clean

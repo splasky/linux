@@ -11,52 +11,50 @@
 #include <linux/delay.h>
 #include <linux/kthread.h>
 #include <linux/workqueue.h>
-
-#include <asm/page.h>
-#include <asm/io.h>
-#include <linux/mm.h>
-
-#define SEARCH_BASE 0xffffffff81000000
-#define SEARCH_OFFSET 0xffffffffa1000000
-
-/* location of sys_call_table in my system */
-#define SYSTABLE_LOC 0xffffffff81a001c0 
+#include <linux/kallsyms.h>
+#include <linux/fdtable.h>
+#include <linux/set_memory.h>
 
 #define NUM_PINNED_PAGES 1
 #define NUM_SYSENTRY 64
 #define MAX_KSTRUCT 64
 
-/* read */
-#define __SYSNUM_flexsc_LOW 0
-/* mlcok2 */
-#define __SYSNUM_flexsc_HIGH 325
-
+#ifdef CONFIG_X86_64
+typedef asmlinkage long (*sys_call_ptr_t)(const struct pt_regs *);
+#else
+typedef asmlinkage long (*sys_call_ptr_t)(unsigned long, unsigned long,
+					  unsigned long, unsigned long,
+					  unsigned long, unsigned long);
+#endif /* CONFIG_X86_64 */
 #define __SYSNUM_flexsc_base 400
-int kstruct_cnt;
 
-struct workqueue_struct *sys_workqueue;
-struct work_struct *sys_works;
+//int kstruct_cnt;
+static struct workqueue_struct *sys_workqueue;
+static struct work_struct *sys_works;
 
-struct task_struct *utask;
-struct page *mypage;
-struct page *pinned_pages[NUM_PINNED_PAGES];
-void *sysentry_start_addr;
-unsigned long **sys_call_table;
-// extern const sys_call_ptr_t sys_call_table[];
+//struct task_struct *utask;
+//struct page *mypage;
+//struct page *pinned_pages[NUM_PINNED_PAGES];
+//void *sysentry_start_addr;
+static struct task_struct *kstruct;
+static struct page *pinned_pages[NUM_PINNED_PAGES];
+static unsigned long *sys_call_table;
 
-asmlinkage long (*flexsc_register_orig)(const char __user *, int, umode_t);
-asmlinkage long (*flexsc_exit_orig)(void);
+// TODO: try typeof
+// static typeof(flexsc_register) *orig_flexsc_register;
+// static typeof(flexsc_exit) *orig_flexsc_exit;
 
-unsigned long **get_sys_call_table(void);
+static asmlinkage long (*orig_flexsc_register)(
+	struct flexsc_init_info __user *info);
+static asmlinkage long (*orig_flexsc_exit)(void);
+
+asmlinkage long syshook_flexsc_register(struct flexsc_init_info __user *info);
+asmlinkage long syshook_flexsc_exit(void);
 
 void print_sysentry(struct flexsc_sysentry *entry);
 void print_multiple_sysentry(struct flexsc_sysentry *entry, size_t n);
 
 inline void pretty_print_emph(char *s)
 {
-    printk("******************** %s ********************\n", s);
+	printk("******************** %s ********************\n", s);
 }
-void address_stuff(void *addr);
-
-
-#define virt_to_pfn(kaddr)	(__pa(kaddr) >> PAGE_SHIFT)

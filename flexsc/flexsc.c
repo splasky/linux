@@ -3,6 +3,9 @@
 #include <linux/delay.h>
 #include <linux/uaccess.h>
 #include <linux/sched/task.h>
+#include <linux/syscalls.h>
+#include <linux/kernel.h>
+#include <asm/syscalls.h>
 
 pid_t hooked_task[FLEXSC_MAX_HOOKED];
 const sys_call_ptr_t *sys_ptr;
@@ -241,8 +244,7 @@ do_syscall(unsigned int sysname, struct pt_regs* regs) {
     return -ENOSYS;
 }
 
-asmlinkage long 
-sys_flexsc_register(struct flexsc_init_info __user *info)
+struct flexsc_sysentry *do_flexsc_register(struct flexsc_init_info *info)
 {
     /* kthread_test(); */
     /* kernel_creation_test(); */
@@ -303,7 +305,7 @@ sys_flexsc_register(struct flexsc_init_info __user *info)
     }
     return 0;
 }
-EXPORT_SYMBOL_GPL(sys_flexsc_register);
+EXPORT_SYMBOL_GPL(do_flexsc_register);
 
 // 근데 이미 전역 변수로 systhread_pool이 선언될 때, 널 포인터로 초기화가 되는데,
 // 그리고 여기서 루프돌면서 포인터 크기 * nentry 만큼 kmalloc하는 건 왜 하는 걸까?
@@ -344,7 +346,7 @@ void alloc_workstruct(struct work_struct *flexsc_works, struct flexsc_init_info 
 }
 
 
-asmlinkage long sys_flexsc_exit(void)
+long do_flexsc_exit(void)
 {
     printk("%s\n", __func__);
     flexsc_destroy_workqueue(flexsc_workqueue);
@@ -353,6 +355,7 @@ asmlinkage long sys_flexsc_exit(void)
     /* flexsc_free_sysinfo(_sysinfo); */
     return 0;
 }
+EXPORT_SYMBOL_GPL(do_flexsc_exit);
 
 
 void flexsc_destroy_workqueue(struct workqueue_struct *flexsc_workqueue)
@@ -531,7 +534,7 @@ static void flexsc_work_handler(struct work_struct *work)
 }
 
 /* Make calling thread(mostly user thread) sleep */
-asmlinkage long sys_flexsc_wait(void) 
+long do_flexsc_wait(void) 
 {
     /* static struct task_struct *systhread_pool[SYSENTRY_NUM_DEFAULT]; */
     /* int i; */
@@ -548,14 +551,14 @@ asmlinkage long sys_flexsc_wait(void)
     } */
     return 0;
 }
-EXPORT_SYMBOL_GPL(sys_flexsc_wait);
+EXPORT_SYMBOL_GPL(do_flexsc_wait);
 
-asmlinkage long sys_flexsc_start_hook(pid_t hooked_pid) 
+long do_flexsc_start_hook(pid_t hooked_pid) 
 {
     printk("flexsc syscall version hook is here!\n");
     return 0;
 }
-EXPORT_SYMBOL_GPL(sys_flexsc_start_hook);
+EXPORT_SYMBOL_GPL(do_flexsc_start_hook);
 
 void print_sysentry(struct flexsc_sysentry *entry)
 {
@@ -566,4 +569,28 @@ void print_sysentry(struct flexsc_sysentry *entry)
             entry->regs->di, entry->regs->si,
             entry->regs->dx, entry->regs->r10,
             entry->regs->r8, entry->regs->r9);
+}
+
+SYSCALL_DEFINE1(flexsc_register, struct flexsc_init_info *, info)
+{
+	do_flexsc_register(info);
+	return 0;
+}
+
+SYSCALL_DEFINE0(flexsc_wait)
+{
+	do_flexsc_wait();
+	return 0;
+}
+
+SYSCALL_DEFINE1(flexsc_start_hook, pid_t, hooked_pid)
+{
+	flexsc_start_hook(hooked_pid);
+	return 0;
+}
+
+SYSCALL_DEFINE0(flexsc_exit)
+{
+	do_flexsc_exit();
+	return 0;
 }

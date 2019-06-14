@@ -7,7 +7,7 @@
 #define __NR_stat 4
 #define __NR_mkdir 83
 #define __NR_getppid 110
-
+#define __NR_clone 56
 
 #define __ARGS_write 3
 #define __ARGS_read 3
@@ -18,6 +18,7 @@
 #define __ARGS_stat 2
 #define __ARGS_mkdir 2
 #define __ARGS_getppid 0
+#define __ARGS_clone 5
 
 /* #define __NR_read 0
 #define __ARGS_read 3
