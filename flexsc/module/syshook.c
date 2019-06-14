@@ -1,28 +1,18 @@
-/**
- * @file syscall_hooking.c
- * @brief variation of syscall hooking via dynamic loading kernel module. It locates sys_call_table and intercept system call invoked.
- * @author Yongrae Jo
- * @version 1.0
- * @date 2017
- */
-
 #include "syshook.h"
 
 /* syscall thread main function */
 int scanner_thread(void *arg)
 {
 	struct flexsc_sysentry *entry = (struct flexsc_sysentry *)arg;
-	int cnt = 0, i, cpu, ret;
+	int i, cpu;
+	bool ret;
 	cpu = smp_processor_id();
 
 	BUG_ON(DEFAULT_CPU != cpu);
 
-	printk("kthread[%d %d %d %d], user[%d, %d] starts\n", current->pid,
-	       current->parent->pid, DEFAULT_CPU, cpu, utask->pid,
-	       utask->parent->pid);
-
-	/* printk("*****************  entry[3] before main loop  *****************\n");
-    print_sysentry(&entry[3]); */
+	// printk("kthread[%d %d %d %d], user[%d, %d] starts\n", current->pid,
+	//        current->parent->pid, DEFAULT_CPU, cpu, utask->pid,
+	//        utask->parent->pid);
 
 	while (1) {
 		set_current_state(TASK_UNINTERRUPTIBLE);
@@ -37,37 +27,24 @@ int scanner_thread(void *arg)
 				printk("entry[%d].rstatus == SUBMITTED\n", i);
 
 				entry[i].rstatus = FLEXSC_STATUS_BUSY;
+				printk("qq nice %d\n",entry[i].sysnum);
 				ret = queue_work_on(DEFAULT_CPU, sys_workqueue,
 						    &sys_works[i]);
 
-				if (ret == NULL) {
+				if (ret == false) {
 					printk("sys_work already queued\n");
 				}
-
-				/* entry[i].sysret = utask->pid; */
-				/* ssleep(3); */
 			}
 		}
-		/* printk("*****************  entry[3]  *****************\n");
-        print_sysentry(&entry[3]); */
-
-		/* printk("hello! %d\n", cnt++); */
 		schedule_timeout(HZ);
 	}
 	return 0;
 }
 
-#ifdef CONFIG_X86_64
-typedef asmlinkage long (*sys_call_ptr_t)(const struct pt_regs *);
-#else
-typedef asmlinkage long (*sys_call_ptr_t)(unsigned long, unsigned long,
-					  unsigned long, unsigned long,
-					  unsigned long, unsigned long);
-#endif /* CONFIG_X86_64 */
-
 static __always_inline long do_syscall(unsigned int sysnum,
 				       struct pt_regs *regs)
 {
+	printk("do syscall was calling!\n");
 	if (unlikely(sysnum >= __SYSNUM_flexsc_base)) {
 		return -1;
 	}
@@ -97,9 +74,10 @@ static void syscall_handler(struct work_struct *work)
 	return;
 }
 
-struct task_struct *kstruct;
-asmlinkage long sys_hook_flexsc_register(struct flexsc_init_info __user *info)
+asmlinkage long syshook_flexsc_register(struct flexsc_init_info __user *info)
 {
+	void *sysentry_start_addr;
+
 	int i, err, npinned_pages;
 	struct flexsc_sysentry *entry;
 
@@ -150,13 +128,15 @@ asmlinkage long sys_hook_flexsc_register(struct flexsc_init_info __user *info)
 	}
 
 	wake_up_process(kstruct);
-
+	printk("**************syshook_flexsc_register success!!!!************\n");
 	return 0;
 }
 
-asmlinkage long sys_hook_flexsc_exit(void)
+long syshook_flexsc_exit(void)
 {
 	int i, ret;
+
+	ret = 1;
 	printk("flexsc_exit hooked start\n");
 	for (i = 0; i < NUM_PINNED_PAGES; i++) {
 		kunmap(pinned_pages[i]);
@@ -209,56 +189,55 @@ void enable_write_protection(void)
 	write_cr0(cr0);
 }
 
-int syscall_hooking_init(void)
-{
-	unsigned long cr0;
-
-	printk("Start hooking\n");
-	if ((sys_call_table = get_sys_call_table()) == NULL) {
-		printk("Can't find sys_call_table\n");
+static __init int syscall_hooking_init(void)
+{	
+	pr_info("Entering: %s\n", __func__);
+	
+	sys_call_table = (void *)kallsyms_lookup_name("sys_call_table");
+	if (!sys_call_table) {
+		pr_err("sch: Couldn't look up sys_call_table\n");
 		return -1;
 	}
-	printk("-----------------------syscall hooking module-----------------------\n");
-	printk("[%p] sys_call_table\n", sys_call_table);
+	
+	pr_info("-----------------------syscall hooking module-----------------------\n");
+	pr_info("[%p] sys_call_table\n", sys_call_table);
+	
+	/* add flexsc register and exit */
+
+	orig_flexsc_register = sys_call_table[__NR_flexsc_register];
+	orig_flexsc_exit = sys_call_table[__NR_flexsc_exit];
+	
+	pr_info("flexsc exit orig: %d %p\n", __NR_flexsc_exit, orig_flexsc_register);
+	pr_info("flexsc register orig:%d %p\n", __NR_flexsc_register, orig_flexsc_exit);
 
 	disable_write_protection();
-
-    /* add flexsc register and exit */
-	flexsc_register_orig = (void *)sys_call_table[__NR_flexsc_register];
-	flexsc_exit_orig = (void *)sys_call_table[__NR_flexsc_exit];
-	sys_call_table[__NR_flexsc_register] = (void *)sys_hook_flexsc_register;
-	sys_call_table[__NR_flexsc_exit] = (void *)sys_hook_flexsc_exit;
-
+	sys_call_table[__NR_flexsc_register] = (void*)&syshook_flexsc_register;
+	sys_call_table[__NR_flexsc_exit] = (void *)&syshook_flexsc_exit;
 	enable_write_protection();
-	printk("%d %s syscall hooking module init\n", __LINE__, __func__);
+	pr_info("%d %s syscall hooking module init\n", __LINE__, __func__);
 	return 0;
 }
 
 void syscall_hooking_cleanup(void)
 {
 	disable_write_protection();
-	sys_call_table[__NR_flexsc_register] = (void *)flexsc_register_orig;
-	sys_call_table[__NR_flexsc_exit] = (void *)flexsc_exit_orig;
+	sys_call_table[__NR_flexsc_register] = (void *)orig_flexsc_register;
+	sys_call_table[__NR_flexsc_exit] = (void *)orig_flexsc_exit;
 	enable_write_protection();
 
-	printk("Hooking moudle cleanup\n");
+	pr_info("Hooking moudle cleanup\n");
 	return;
-}
-
-unsigned long **get_sys_call_table(void)
-{
-	unsigned long **entry = (unsigned long **)PAGE_OFFSET;
-
-	for (; (unsigned long)entry < ULONG_MAX; entry += 1) {
-		if (entry[__NR_close] == (unsigned long *)ksys_close) {
-			return entry;
-		}
-	}
-	return NULL;
 }
 
 void print_sysentry(struct flexsc_sysentry *entry)
 {
+	printk("print sysentry\n");
+
+	if (entry == NULL) {
+		printk("Cannot print sysentry! Entry is NULL");
+		return;
+	}
+	
 	printk("[%p] %d-%d-%d-%d with %lu,%lu,%lu,%lu,%lu,%lu\n", entry,
 	       entry->sysnum, entry->nargs, entry->rstatus, entry->sysret,
 	       entry->regs->di, entry->regs->si, entry->regs->dx,
@@ -271,31 +250,6 @@ void print_multiple_sysentry(struct flexsc_sysentry *entry, size_t n)
 	for (i = 0; i < n; i++) {
 		print_sysentry(&entry[i]);
 	}
-}
-
-void address_stuff(void *addr)
-{
-	/* printk("flexsc_register() hooked by %d\n", current->pid);
-    printk("%d\n", PAGE_SHIFT);
-    printk("sizeof entry: %ld, %ld\n", sizeof(entry), sizeof(*entry)); */
-	/* 
-    physical_address = virt_to_phys(info->sysentry);
-
-    printk("# of pinned pages:                   %d\n", npinned_pages);
-    printk("pinned_pages[0]                      %p\n", pinned_pages[0]);
-    printk("page_address(pinned_pages[0]):       %p\n", page_address(pinned_pages[0]));
-    printk("sysentry_start_addr:                 %p\n", sysentry_start_addr);
-
-    printk("physical address                     %p\n", (void *)physical_address);
-    printk("info->sysentry                       %p\n", info->sysentry);
-    printk("__pa(info->sysentry)                 %p\n", (void *)__pa(info->sysentry));
-    printk("virt_to_page(info->sysentry)         %p\n", virt_to_page(info->sysentry));
-
-    printk("virt_to_pfn(sysentry)                %ld\n", virt_to_pfn(info->sysentry));
-    printk("virt_to_phys(sysentry)               %p\n", (void *)virt_to_phys(info->sysentry));
-
-    printk("page->virt                           %p\n", page_address(virt_to_page(info->sysentry)));
-    printk("%20s\n", "After kamp(pinned_pages)"); */
 }
 
 module_init(syscall_hooking_init);
