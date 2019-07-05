@@ -1,6 +1,7 @@
 #include "flexsc.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define SYSPAGE_PER_TASK 1
 
@@ -89,6 +90,7 @@ int init_map_syspage(struct flexsc_init_info *info)
     info->sysentry = entry;
     info->total_bytes = total;
 
+    /*
     info->sysentry[0].sysnum = 1;
     info->sysentry[0].rstatus = 2;
     info->sysentry[0].nargs = 3;
@@ -122,8 +124,8 @@ int init_map_syspage(struct flexsc_init_info *info)
     info->sysentry[7].args[4] = 5;
     info->sysentry[7].args[5] = 6;
 
-    /* print_sysentry(&(info->sysentry[0])); */
-
+    print_sysentry(&(info->sysentry[0]));
+    */
 
     return 0;
 }
@@ -169,6 +171,7 @@ flexsc_register(struct flexsc_init_info *info)
     print_init_info(info);
     __flexsc_register(info);
     /* flexsc_hook(); */
+    printf("After register: info->nentry: %d\n", info->nentry);
 
     /* Set global sysentry to registered entry */
     gentry = info->sysentry;
@@ -197,7 +200,7 @@ pid_t gettid(void)
     return syscall(186);
 }
 
-long flexsc_syscall(unsigned sysnum, unsigned n, long args[6], struct flexsc_cb *cb)
+long flexsc_syscall(unsigned sysnum, unsigned n, unsigned long args[6], struct flexsc_cb *cb)
 {
 
 }
@@ -207,6 +210,7 @@ struct flexsc_sysentry *free_syscall_entry(void)
     int i;
     for (i = 0; i < SYSENTRY_NUM_DEFAULT; i++) {
         if (gentry[i].rstatus == FLEXSC_STATUS_FREE) {
+	    printf("Get free space: %d, address: %p\n", i, &gentry[i]);
             return &gentry[i];
         }
     }
