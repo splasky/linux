@@ -129,6 +129,22 @@ void request_syscall_pthread_create(struct flexsc_sysentry *entry, pthread_t *ne
 	entry->args[4] = NULL;
 }
 
+void request_syscall_pthread_create(struct flexsc_sysentry *entry, pthread_t *newthread,
+                   const pthread_attr_t *attr,
+                   void *(*start_routine)(void *),
+                   void *arg)
+{
+	entry->sysnum = __NR_clone;
+	entry->nargs = __ARGS_clone;
+	entry->rstatus = FLEXSC_STATUS_SUBMITTED;
+	char* stackTop = malloc(STACK_SIZE);
+	entry->args[0] = (long)start_routine;
+	entry->args[1] = (long)stackTop;
+	entry->args[2] = (long)CLONE_NEWUTS | SIGCHLD;
+	entry->args[3] = (long)arg;
+	entry->args[4] = NULL;
+}
+
 
 /* long flexsc_getpid(struct flexsc_sysentry *entry)
 {

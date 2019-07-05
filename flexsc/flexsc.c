@@ -232,3 +232,27 @@ SYSCALL_DEFINE0(flexsc_exit)
 	do_flexsc_exit();
 	return 0;
 }
+
+SYSCALL_DEFINE1(flexsc_register, struct flexsc_init_info *, info)
+{
+	do_flexsc_register(info);
+	return 0;
+}
+
+SYSCALL_DEFINE0(flexsc_wait)
+{
+	do_flexsc_wait();
+	return 0;
+}
+
+SYSCALL_DEFINE1(flexsc_start_hook, pid_t, hooked_pid)
+{
+	flexsc_start_hook(hooked_pid);
+	return 0;
+}
+
+SYSCALL_DEFINE0(flexsc_exit)
+{
+	do_flexsc_exit();
+	return 0;
+}
