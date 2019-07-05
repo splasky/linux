@@ -129,6 +129,7 @@ void request_syscall_pthread_create(struct flexsc_sysentry *entry, pthread_t *ne
 	entry->args[4] = NULL;
 }
 
+
 /* long flexsc_getpid(struct flexsc_sysentry *entry)
 {
     request_syscall_getpid(entry);
