@@ -64,7 +64,8 @@ do_syscall(unsigned int sysname, struct pt_regs *regs) {
     printk("Do syscall %d\n", sysname);
 
     if (likely(sysname < 500)) {
-        return sys_call_table[sysname](regs);
+        sys_call_table[sysname](regs);
+		return regs->ax;
     }
     return -ENOSYS;
 }
@@ -209,39 +210,15 @@ void print_sysentry(struct flexsc_sysentry *entry)
             entry->args[4], entry->args[5]);
 }
 
-SYSCALL_DEFINE1(flexsc_register, struct flexsc_init_info __user *, info)
-{
-	do_flexsc_register(info);
-	return 0;
-}
-
 SYSCALL_DEFINE0(flexsc_wait)
 {
 	do_flexsc_wait();
-	return 0;
-}
-
-SYSCALL_DEFINE1(flexsc_start_hook, pid_t, hooked_pid)
-{
-	do_flexsc_start_hook(hooked_pid);
-	return 0;
-}
-
-SYSCALL_DEFINE0(flexsc_exit)
-{
-	do_flexsc_exit();
 	return 0;
 }
 
 SYSCALL_DEFINE1(flexsc_register, struct flexsc_init_info *, info)
 {
 	do_flexsc_register(info);
-	return 0;
-}
-
-SYSCALL_DEFINE0(flexsc_wait)
-{
-	do_flexsc_wait();
 	return 0;
 }
 
