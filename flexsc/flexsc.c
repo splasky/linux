@@ -19,7 +19,8 @@ static struct work_struct *flexsc_works = NULL;
 static void flexsc_work_handler(struct work_struct *work);
 
 static struct page *kernel_page;
-int systhread_on_cpu[2] = { 5, 6 };
+// TODO:May be remove
+// int systhread_on_cpu[2] = {5, 6};
 struct task_struct *user_task;
 size_t nentry; /* Reserved for devel mode */
 
@@ -47,10 +48,10 @@ int systhread_main(void *arg)
 
 void flexsc_create_workqueue(char *name)
 {
-	printk("Creating flexsc workqueue...\n");
-	/* Create workqueue so that systhread can put a work */
-	flexsc_workqueue = create_workqueue(name);
-	printk("Address of flexsc_workqueue: %p\n", flexsc_workqueue);
+    printk("Creating flexsc workqueue...\n");
+    /* Create workqueue so that systhread can put a work */
+    flexsc_workqueue = alloc_workqueue(name, WQ_MEM_RECLAIM | WQ_UNBOUND, 0);
+    printk("Address of flexsc_workqueue: %p\n", flexsc_workqueue);
 }
 
 static __always_inline long do_syscall(unsigned int sysname,
@@ -92,11 +93,10 @@ EXPORT_SYMBOL_GPL(do_flexsc_register);
 
 void alloc_workstruct(struct flexsc_init_info *info)
 {
-	int nentry = info->nentry; /* Number of sysentry */
-	int i;
-	printk("INFO Allocating work_struct(#%d)\n", nentry);
-	flexsc_works = (struct work_struct *)kmalloc(
-		sizeof(struct work_struct) * nentry, GFP_KERNEL);
+    int nentry = info->nentry; /* Number of sysentry */
+    int i;
+    printk("INFO Allocating work_struct(#%d)\n", nentry);
+    flexsc_works = (struct work_struct *)kmalloc(sizeof(struct work_struct) * nentry, GFP_KERNEL);
 
 	printk("Initializing: Binding work_struct and work_handler\n");
 	for (i = 0; i < nentry; i++) {
@@ -122,8 +122,10 @@ void flexsc_destroy_workqueue(struct workqueue_struct *flexsc_workqueue)
 		return;
 	}
 
-	printk("Destroying flexsc workqueue...\n");
-	destroy_workqueue(flexsc_workqueue);
+    pr_info("flushing flexsc workqueue");
+    flush_workqueue(flexsc_workqueue);
+    printk("Destroying flexsc workqueue...\n");
+    destroy_workqueue(flexsc_workqueue);
 }
 
 void flexsc_free_works(struct work_struct *flexsc_works)
