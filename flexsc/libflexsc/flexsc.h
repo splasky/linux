@@ -53,5 +53,5 @@ static void __flexsc_register(struct flexsc_init_info *info)
 
 void print_sysentry(struct flexsc_sysentry *entry);
 
-long flexsc_syscall(unsigned sysnum, unsigned n, long args[6], struct flexsc_cb *cb);
+long flexsc_syscall(unsigned sysnum, unsigned n, unsigned long args[6], struct flexsc_cb *cb);
 void init_cpuinfo_default(struct flexsc_cpuinfo *cpuinfo);

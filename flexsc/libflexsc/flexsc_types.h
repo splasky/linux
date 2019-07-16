@@ -38,7 +38,7 @@ struct flexsc_sysentry {
     unsigned rstatus;
     unsigned sysnum;
     unsigned sysret;
-    struct pt_regs *regs;
+    unsigned long args[6];
 } ____cacheline_aligned_in_smp;
 
 struct flexsc_init_info {

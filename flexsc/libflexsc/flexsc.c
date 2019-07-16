@@ -171,7 +171,7 @@ flexsc_register(struct flexsc_init_info *info)
     print_init_info(info);
     __flexsc_register(info);
     /* flexsc_hook(); */
-    printf("After register: info->nentry: %d\n", info->nentry);
+    printf("After register: info->nentry: %zu\n", info->nentry);
 
     /* Set global sysentry to registered entry */
     gentry = info->sysentry;

@@ -76,7 +76,7 @@ struct flexsc_sysentry {
     unsigned rstatus;
     unsigned sysnum;
     unsigned sysret;
-    struct pt_regs *regs;
+	unsigned long args[6];
 } ____cacheline_aligned_in_smp;
 
 
@@ -126,7 +126,7 @@ void init_systhread(struct flexsc_init_info *info);
 
 void create_flexsc_systhread(void);
 
-void flexsc_create_workqueue(char *name, struct workqueue_struct *flexsc_workqueue);
+void flexsc_create_workqueue(char *name);
 void flexsc_destroy_workqueue(struct workqueue_struct *flexsc_workqueue);
 void flexsc_free_works(struct work_struct *flexsc_works);
 void flexsc_stop_systhreads(void);
@@ -134,8 +134,7 @@ void flexsc_stop_systhreads(void);
 void flexsc_free_sysinfo(struct flexsc_systhread_info *_sysinfo[]);
 
 void alloc_systhreads(struct task_struct *systhread_pool[], int nentry);
-void alloc_workstruct(struct work_struct *flexsc_works, struct flexsc_init_info *info);
-void spawn_systhreads(struct task_struct *systhread_pool[], struct flexsc_init_info *info);
+void alloc_workstruct(struct flexsc_init_info *info);
 void print_sysentry(struct flexsc_sysentry *entry);
 
 pid_t flexsc_kernel_thread(int (*fn)(void *), void *arg, unsigned long flags);

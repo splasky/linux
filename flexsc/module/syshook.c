@@ -42,7 +42,7 @@ int scanner_thread(void *arg)
 }
 
 static __always_inline long do_syscall(unsigned int sysnum,
-				       struct pt_regs *regs)
+				       unsigned long args[6])
 {
 	printk("do syscall was calling!\n");
 	if (unlikely(sysnum >= __SYSNUM_flexsc_base)) {
@@ -50,7 +50,9 @@ static __always_inline long do_syscall(unsigned int sysnum,
 	}
 
 	if (likely(sysnum < 500)) {
-		return ((sys_call_ptr_t *)sys_call_table)[sysnum](regs);
+		struct pt_regs regs = { args[0], args[1], args[2], 
+								args[3], args[4], args[5]};
+		return ((sys_call_ptr_t *)sys_call_table)[sysnum](&regs);
 	}
 
 	return -ENOSYS;
@@ -63,7 +65,7 @@ static void syscall_handler(struct work_struct *work)
 
 	print_sysentry(entry);
 
-	sysret = do_syscall(entry->sysnum, entry->regs);
+	sysret = do_syscall(entry->sysnum, entry->args);
 
 	if (sysret == -ENOSYS) {
 		printk("%d %s: do_syscall failed!\n", __LINE__, __func__);
@@ -240,8 +242,8 @@ void print_sysentry(struct flexsc_sysentry *entry)
 	
 	printk("[%p] %d-%d-%d-%d with %lu,%lu,%lu,%lu,%lu,%lu\n", entry,
 	       entry->sysnum, entry->nargs, entry->rstatus, entry->sysret,
-	       entry->regs->di, entry->regs->si, entry->regs->dx,
-	       entry->regs->r10, entry->regs->r8, entry->regs->r9);
+	       entry->args[0], entry->args[1], entry->args[2],
+	       entry->args[3], entry->args[4], entry->args[5]);
 }
 
 void print_multiple_sysentry(struct flexsc_sysentry *entry, size_t n)

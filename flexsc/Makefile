@@ -1,4 +1,4 @@
-obj-y = flexsc.o hook.o init.o mmap.o systhread.o
+obj-y = flexsc.o mmap.o
 
 all:
 	make -C libflexsc

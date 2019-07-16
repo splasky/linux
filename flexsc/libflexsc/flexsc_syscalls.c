@@ -126,9 +126,8 @@ void request_syscall_pthread_create(struct flexsc_sysentry *entry, pthread_t *ne
 	entry->args[1] = (long)stackTop;
 	entry->args[2] = (long)CLONE_NEWUTS | SIGCHLD;
 	entry->args[3] = (long)arg;
-	entry->args[4] = NULL;
+	//entry->args[4] = NULL;
 }
-
 
 /* long flexsc_getpid(struct flexsc_sysentry *entry)
 {
