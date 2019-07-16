@@ -52,6 +52,21 @@ struct flexsc_sysentry *flexsc_pthread_create(pthread_t *newthread,
 	struct flexsc_sysentry *entry;
 	entry = free_syscall_entry();
 	request_syscall_pthread_create(entry, newthread, attr, start_routine, arg);
+
+struct flexsc_sysentry *flexsc_open(const char *filename, int flags,
+				    mode_t mode)
+{
+	struct flexsc_sysentry *entry;
+	entry = free_syscall_entry();
+	request_syscall_open(entry, filename, flags, mode);
+	return entry;
+}
+
+struct flexsc_sysentry *flexsc_close(unsigned int fd)
+{
+	struct flexsc_sysentry *entry;
+	entry = free_syscall_entry();
+	request_syscall_close(entry, fd);
 	return entry;
 }
 
