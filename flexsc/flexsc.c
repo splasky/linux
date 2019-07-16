@@ -23,6 +23,9 @@ int systhread_on_cpu[2] = {5, 6};
 struct task_struct *user_task;
 size_t nentry; /* Reserved for devel mode */
 
+int (*p_sys_flexsc_register)(flexsc_register, struct flexsc_init_info *, info) = &do_flexsc_register;
+EXPORT_SYMBOL_GPL(p_sys_flexsc_register);
+
 int thread_main(void *arg)
 {
     printk("Hello kernel_thread via system call\n");
