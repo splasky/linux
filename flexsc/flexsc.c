@@ -19,8 +19,6 @@ static struct work_struct *flexsc_works = NULL;
 static void flexsc_work_handler(struct work_struct *work);
 
 static struct page *kernel_page;
-// TODO:May be remove
-// int systhread_on_cpu[2] = {5, 6};
 struct task_struct *user_task;
 size_t nentry; /* Reserved for devel mode */
 
@@ -32,12 +30,15 @@ int systhread_main(void *arg)
 		int idx;
 		ssleep(1);
 		for (idx = 0; idx < nentry; ++idx) {
-			if (info->sysentry[idx].rstatus == FLEXSC_STATUS_SUBMITTED) {
+			if (info->sysentry[idx].rstatus ==
+			    FLEXSC_STATUS_SUBMITTED) {
 				printk("got work index(%d)\n", idx);
-				info->sysentry[idx].rstatus = FLEXSC_STATUS_BUSY;
+				info->sysentry[idx].rstatus =
+					FLEXSC_STATUS_BUSY;
 				// open a thread to handle syscall
 				pr_info("putting work into flexsc workqueue");
-				queue_work(flexsc_workqueue, &flexsc_works[idx]);
+				queue_work(flexsc_workqueue,
+					   &flexsc_works[idx]);
 			}
 		}
 	}
@@ -48,10 +49,11 @@ int systhread_main(void *arg)
 
 void flexsc_create_workqueue(char *name)
 {
-    printk("Creating flexsc workqueue...\n");
-    /* Create workqueue so that systhread can put a work */
-    flexsc_workqueue = alloc_workqueue(name, WQ_MEM_RECLAIM | WQ_UNBOUND, 0);
-    printk("Address of flexsc_workqueue: %p\n", flexsc_workqueue);
+	printk("Creating flexsc workqueue...\n");
+	/* Create workqueue so that systhread can put a work */
+	flexsc_workqueue =
+		alloc_workqueue(name, WQ_MEM_RECLAIM | WQ_UNBOUND, 0);
+	printk("Address of flexsc_workqueue: %p\n", flexsc_workqueue);
 }
 
 static __always_inline long do_syscall(unsigned int sysname,
@@ -69,7 +71,8 @@ static __always_inline long do_syscall(unsigned int sysname,
 
 struct flexsc_sysentry *do_flexsc_register(struct flexsc_init_info *user_info)
 {
-	struct flexsc_init_info *info = kmalloc(sizeof(struct flexsc_init_info), GFP_KERNEL);
+	struct flexsc_init_info *info =
+		kmalloc(sizeof(struct flexsc_init_info), GFP_KERNEL);
 	struct flexsc_sysentry *k_sysentry;
 	copy_from_user(info, user_info, sizeof(struct flexsc_init_info));
 	nentry = info->nentry;
@@ -93,15 +96,17 @@ EXPORT_SYMBOL_GPL(do_flexsc_register);
 
 void alloc_workstruct(struct flexsc_init_info *info)
 {
-    int nentry = info->nentry; /* Number of sysentry */
-    int i;
-    printk("INFO Allocating work_struct(#%d)\n", nentry);
-    flexsc_works = (struct work_struct *)kmalloc(sizeof(struct work_struct) * nentry, GFP_KERNEL);
+	int nentry = info->nentry; /* Number of sysentry */
+	int i;
+	printk("INFO Allocating work_struct(#%d)\n", nentry);
+	flexsc_works = (struct work_struct *)kmalloc(
+		sizeof(struct work_struct) * nentry, GFP_KERNEL);
 
 	printk("Initializing: Binding work_struct and work_handler\n");
 	for (i = 0; i < nentry; i++) {
 		memset(&(info->sysentry[i]), 0, sizeof(struct flexsc_sysentry));
-		FLEXSC_INIT_WORK(&flexsc_works[i], flexsc_work_handler, &(info->sysentry[i]));
+		FLEXSC_INIT_WORK(&flexsc_works[i], flexsc_work_handler,
+				 &(info->sysentry[i]));
 	}
 }
 
@@ -122,10 +127,10 @@ void flexsc_destroy_workqueue(struct workqueue_struct *flexsc_workqueue)
 		return;
 	}
 
-    pr_info("flushing flexsc workqueue");
-    flush_workqueue(flexsc_workqueue);
-    printk("Destroying flexsc workqueue...\n");
-    destroy_workqueue(flexsc_workqueue);
+	pr_info("flushing flexsc workqueue");
+	flush_workqueue(flexsc_workqueue);
+	printk("Destroying flexsc workqueue...\n");
+	destroy_workqueue(flexsc_workqueue);
 }
 
 void flexsc_free_works(struct work_struct *flexsc_works)
@@ -141,7 +146,9 @@ void flexsc_free_works(struct work_struct *flexsc_works)
 		kfree(&flexsc_works[i]);
 }
 
-void flexsc_syscall_hook(unsigned long args[6]){}
+void flexsc_syscall_hook(unsigned long args[6])
+{
+}
 
 static void flexsc_work_handler(struct work_struct *work)
 {
