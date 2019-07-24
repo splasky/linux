@@ -145,22 +145,6 @@ void flexsc_free_works(struct work_struct *flexsc_works)
 		kfree(&flexsc_works[i]);
 }
 
-void flexsc_syscall_hook(unsigned int sysname, unsigned long args[6])
-{
-	struct task_struct *task;
-
-	task = current;
-	if (likely(task->syspage == NULL)) {
-		pr_err("task syspage is NULL");
-		return;
-	}
-
-	pr_info("flexsc_syscall_hook[%5d][%2d] %3d "
-		"%016lx %016lx %016lx %016lx %016lx %016lx\n",
-		task->pid, task->tgid, sysname, args[0], args[1], args[2],
-		args[3], args[4], args[5]);
-}
-
 static void flexsc_work_handler(struct work_struct *work)
 {
 	/* Here is the place where system calls are actually executed */
