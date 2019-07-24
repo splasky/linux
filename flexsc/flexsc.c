@@ -63,8 +63,7 @@ static __always_inline long do_syscall(unsigned int sysname,
 	printk("Do syscall %d\n", sysname);
 
 	if (likely(sysname < 500)) {
-		sys_call_table[sysname](regs);
-		return regs->ax;
+		return sys_call_table[sysname](regs);
 	}
 	return -ENOSYS;
 }
