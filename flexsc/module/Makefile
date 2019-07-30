@@ -10,7 +10,7 @@ ifneq ($(KERNELPATH),)
 	KDIR	:= $(KERNELPATH)
 else
 	# Default kernel path
-	KDIR	:= /home/splasky/flexsc/linux/
+	KDIR	:= /home/splasky/workspace/flexsc/linux/
 endif
 
 ARCH	:= $(shell uname -p)
