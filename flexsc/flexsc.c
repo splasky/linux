@@ -12,6 +12,7 @@ pid_t hooked_task[FLEXSC_MAX_HOOKED];
 const sys_call_ptr_t *sys_ptr;
 
 static struct task_struct *systhread;
+struct task_struct *utask;
 /* Declaration of workqueue */
 static struct workqueue_struct *flexsc_workqueue;
 static struct work_struct *flexsc_works = NULL;
@@ -19,12 +20,16 @@ static struct work_struct *flexsc_works = NULL;
 static void flexsc_work_handler(struct work_struct *work);
 
 static struct page *kernel_page;
-struct task_struct *user_task;
 size_t nentry; /* Reserved for devel mode */
 
 int systhread_main(void *arg)
 {
 	struct flexsc_init_info *info = (struct flexsc_init_info *)arg;
+
+	int cpu = cpu = smp_processor_id();
+	printk("kthread[%d %d %d %d], user[%d, %d] starts\n", current->pid,
+	       current->parent->pid, DEFAULT_CPU, cpu, utask->pid,
+	       utask->parent->pid);
 
 	while (!kthread_should_stop()) {
 		int idx;
@@ -32,11 +37,9 @@ int systhread_main(void *arg)
 		for (idx = 0; idx < nentry; ++idx) {
 			if (info->sysentry[idx].rstatus ==
 			    FLEXSC_STATUS_SUBMITTED) {
-				printk("got work index(%d)\n", idx);
+				pr_info("got work index(%d)\n", idx);
 				info->sysentry[idx].rstatus =
 					FLEXSC_STATUS_BUSY;
-				// open a thread to handle syscall
-				pr_info("putting work into flexsc workqueue");
 				queue_work(flexsc_workqueue,
 					   &flexsc_works[idx]);
 			}
@@ -73,20 +76,20 @@ struct flexsc_sysentry *do_flexsc_register(struct flexsc_init_info *user_info)
 	struct flexsc_init_info *info =
 		kmalloc(sizeof(struct flexsc_init_info), GFP_KERNEL);
 	struct flexsc_sysentry *k_sysentry;
+
 	copy_from_user(info, user_info, sizeof(struct flexsc_init_info));
 	nentry = info->nentry;
-	printk("nentry: %lu\n", info->nentry);
-
+	utask = current;
 	down_read(&current->mm->mmap_sem);
 
 	get_user_pages((unsigned long)info->sysentry, 1, 1, &kernel_page, NULL);
 	k_sysentry = (struct flexsc_sysentry *)kmap(kernel_page);
 	info->sysentry = k_sysentry;
-
 	up_read(&current->mm->mmap_sem);
 
 	flexsc_create_workqueue("flexsc_workqueue");
 	alloc_workstruct(info);
+
 	systhread = kthread_run(systhread_main, info, "systhread_main");
 
 	return 0;
@@ -163,11 +166,10 @@ static void flexsc_work_handler(struct work_struct *work)
 	regs->r9 = entry->args[4];
 	regs->r8 = entry->args[5];
 
-	entry->sysret = do_syscall(sysnum, regs);
 	printk("%d(%lu,%lu,%lu,%lu,%lu,%lu)->%p\n", sysnum, regs->di, regs->si,
 	       regs->dx, regs->r10, regs->r9, regs->r8, &entry->sysret);
+	entry->sysret = do_syscall(sysnum, regs);
 	kfree(regs);
-
 	entry->rstatus = FLEXSC_STATUS_DONE;
 	printk("%d flexsc_work_handler done\n", ++cnt);
 	return;
