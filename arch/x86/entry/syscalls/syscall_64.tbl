@@ -346,7 +346,6 @@
 
 400     common  flexsc_register     __x64_sys_flexsc_register
 401     common  flexsc_wait         __x64_sys_flexsc_wait
-402     common  flexsc_start_hook   __x64_sys_flexsc_start_hook
 403     common  flexsc_exit         __x64_sys_flexsc_exit
 
 #
