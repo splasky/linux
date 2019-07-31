@@ -1,4 +1,4 @@
-obj-y = flexsc.o mmap.o
+obj-y = flexsc.o
 
 all:
 	make -C libflexsc
