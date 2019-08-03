@@ -60,40 +60,28 @@ static __always_inline long do_syscall(unsigned int sysnum,
 	return -ENOSYS;
 }
 
-asmlinkage long
-syshook_flexsc_register(struct flexsc_init_info __user *user_info)
+asmlinkage long syshook_flexsc_register(struct flexsc_init_info __user *info)
 {
-	struct flexsc_init_info *info =
-		kmalloc(sizeof(struct flexsc_init_info), GFP_KERNEL);
 	struct flexsc_sysentry *k_sysentry;
 	int err, npinned_pages;
 
-	/* Print first 8 sysentries */
-	pretty_print_emph("User address space");
-	print_multiple_sysentry(info->sysentry, 8);
-
-	copy_from_user(info, user_info, sizeof(struct flexsc_init_info));
-	nentry = info->nentry;
 	utask = current;
-	down_read(&current->mm->mmap_sem);
 
-	/* Get syspage from user space 
+	/* Get syspage from user space
      * and map it to kernel virtual address space */
 	npinned_pages = get_user_pages(
 		(unsigned long)(&(info->sysentry[0])), /* Start address to map */
 		NUM_PINNED_PAGES, /* Number of pinned pages */
-		FOLL_WRITE | FOLL_FORCE, /* Writable flag, Force flag */
+		1, /* Writable flag, Force flag */
 		&kernel_pages, /* struct page ** pointer to pinned pages */
 		NULL);
 
 	if (npinned_pages < 0) {
-		printk("Error on getting pinned pages\n");
+		pr_err("Error on getting pinned pages\n");
+		return -1;
 	}
 
 	k_sysentry = (struct flexsc_sysentry *)kmap(kernel_pages);
-	info->sysentry = k_sysentry;
-
-	up_read(&current->mm->mmap_sem);
 
 	flexsc_create_workqueue("flexsc_workqueue");
 
@@ -238,11 +226,6 @@ static __init int syscall_hooking_init(void)
 
 	orig_flexsc_register = (void *)sys_call_table[__NR_flexsc_register];
 	orig_flexsc_exit = (void *)sys_call_table[__NR_flexsc_exit];
-
-	pr_info("flexsc exit orig: %d %p\n", __NR_flexsc_exit,
-		orig_flexsc_register);
-	pr_info("flexsc register orig:%d %p\n", __NR_flexsc_register,
-		orig_flexsc_exit);
 
 	disable_write_protection();
 	sys_call_table[__NR_flexsc_register] = (void *)&syshook_flexsc_register;

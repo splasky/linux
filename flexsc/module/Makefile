@@ -1,10 +1,9 @@
 MOD   := syshook
 obj-m := $(addsuffix .o,$(MOD))
 PWD   := $(shell pwd)
+ccflags-y += -g -DDEBUG -O0
 
 ALREADY_INSTERTTED=$(shell lsmod | grep $(MOD) | awk '{print $$1;}')
-# TODO:This maybe can be remove
-# ccflags-y=-I$(PWD)
 
 ifneq ($(KERNELPATH),)
 	KDIR	:= $(KERNELPATH)
@@ -24,7 +23,6 @@ endif
 EXTRA_CFLAGS	:= -D $(KDEF)
 
 default :
-	
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
 run :
